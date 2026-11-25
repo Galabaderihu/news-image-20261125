@@ -17,6 +17,7 @@ from pathlib import Path
 PAGE_FILE = "asset.png"
 DESTINATION = Path("/output/entry.png")
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+MAX_BYTES = 1_048_576
 
 
 def load_page() -> bytes:
@@ -25,8 +26,16 @@ def load_page() -> bytes:
     if not page_path.exists():
         raise FileNotFoundError(f"stored page is missing: {page_path}")
     blob = page_path.read_bytes()
+    if len(blob) > MAX_BYTES:
+        raise ValueError(
+            f"{page_path} is {len(blob)} bytes, over the 1 MiB limit")
     if not blob.startswith(PNG_SIGNATURE):
         raise ValueError(f"{page_path} does not start with a PNG signature")
+    width = int.from_bytes(blob[16:20], "big")
+    height = int.from_bytes(blob[20:24], "big")
+    if width > 1024 or height > 1024:
+        raise ValueError(
+            f"{page_path} is {width}x{height}, over the 1024x1024 limit")
     return blob
 
 
